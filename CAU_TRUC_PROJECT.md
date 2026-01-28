@@ -118,15 +118,15 @@ pack-a-mal/
 **Folder:** `dynamic-analysis/internal/networksim/` ✨
 
 Chứa logic chính:
-- **`networksim.go`** (250 lines):
-  - `IsURLAlive()` - Kiểm tra URL có alive không
-  - `ShouldRedirectToINetSim()` - Quyết định có redirect hay không
+- **`networksim.go`** (~120 lines):
+  - `IsURLAlive()` - Kiểm tra URL có alive không (HEAD request)
+  - `ShouldRedirectToINetSim()` - Quyết định redirect (nếu URL không alive)
   - `GetDNSServers()` - Trả về DNS servers cho sandbox
-  - `ValidateINetSimConnection()` - Validate INetSim service
+  - `ValidateINetSimConnection()` - Validate INetSim (đơn giản)
 
-- **`networksim_test.go`** (200 lines):
-  - 20 unit test cases
-  - Test coverage: URL liveness, redirection logic, DNS config
+- **`networksim_test.go`** (~80 lines):
+  - 4 unit test cases chính
+  - Test coverage: URL liveness, redirection, DNS config
 
 **Mục đích:** Thực hiện yêu cầu *"kiểm tra xem URL có alive hay không, nếu không alive thì điều hướng tới dịch vụ Inetsim"*
 
