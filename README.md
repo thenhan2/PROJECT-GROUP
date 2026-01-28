@@ -2,17 +2,6 @@
 
 Package Analysis for Malware - A comprehensive tool for analyzing packages from various open source ecosystems to detect potentially malicious behavior.
 
-## Network Simulation Integration (NEW!)
-
-Pack-A-Mal now features **INetSim integration** for safe analysis of packages with network-based malicious behavior!
-
-### Key Features
-✅ **Automatic URL liveness detection** - Checks if URLs are active before analysis  
-✅ **Intelligent traffic redirection** - Routes dead URLs to INetSim simulation  
-✅ **Safe C2 analysis** - Analyze malware C2 communication without real connections  
-✅ **Complete network logging** - Capture all simulated network interactions  
-
-
 ## Project Overview: a dynamic malware analysis framwork for open-source packages
 
 
