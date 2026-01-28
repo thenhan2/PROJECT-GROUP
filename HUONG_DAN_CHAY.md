@@ -13,8 +13,8 @@ docker-compose -f docker-compose.network-sim.yml up -d
 **Kết quả mong đợi:**
 ```
 ✔ Network pack-a-mal-network    Created
-✔ Container pack-a-mal-inetsim  Healthy
-✔ Container pack-a-mal-sim-api  Started
+✔ Container pack-a-mal-inetsim  Healthy  
+✔ Container pack-a-mal-sim-api  Started (healthy)
 ```
 
 ## Bước 2: Kiểm tra Services đang chạy
@@ -75,13 +75,14 @@ go test -v
 
 **Kết quả mong đợi:**
 ```
-PASS: TestNew
-PASS: TestDefaultConfig
-PASS: TestIsURLAlive
-PASS: TestShouldRedirectToINetSim
-PASS: TestGetDNSServers
-... (tổng 20 tests)
-ok      github.com/.../networksim
+=== RUN   TestDefaultConfig
+--- PASS: TestDefaultConfig (0.00s)
+=== RUN   TestIsURLAlive
+--- PASS: TestIsURLAlive (0.XXs)
+=== RUN   TestShouldRedirectToINetSim
+--- PASS: TestShouldRedirectToINetSim (0.00s)
+PASS
+ok      github.com/ossf/package-analysis/internal/networksim    X.XXXs
 ```
 
 ## Bước 7: Test với Sample Malicious Package
@@ -90,17 +91,29 @@ ok      github.com/.../networksim
 # Quay lại dynamic-analysis
 cd ..\..
 
-# Di chuyển vào sample package
+# Di chuyển vào sample packages
 cd sample_packages\malicious_network_package
 
-# Cài đặt dependencies
-pip install requests
+# Cài đặt package
+pip install -e .
 
 # Chạy test
 python test_network.py
 ```
 
-**Kết quả mong đợi:** Package sẽ thử kết nối tới các dead URLs và thất bại (đây là behavior mong muốn khi chưa có DNS redirection)
+**Kết quả mong đợi:** 
+```
+============================================================
+Malicious Network Package - Connecting to dead URL
+============================================================
+
+[*] Target URL: http://malicious-c2-server.example.com/api/data
+[*] Attempting connection...
+[-] Connection failed: HTTPConnectionPool(...): Max retries exceeded...
+============================================================
+```
+
+**Lưu ý:** Package sẽ thử kết nối tới dead URLs. Connection failed là behavior đúng khi chưa cấu hình DNS redirection. Khi network simulation được enable trong Go code, traffic sẽ được redirect đến INetSim.
 
 ## Bước 8: Xem Logs
 
@@ -112,7 +125,7 @@ docker logs pack-a-mal-inetsim
 docker logs pack-a-mal-sim-api
 
 # Xem logs file (nếu cần)
-Get-Content ..\service-simulation-module\shared\logs\inetsim\service.log -Tail 20
+Get-Content "..\..\service-simulation-module\shared\logs\inetsim\service.log" -Tail 20
 ```
 
 ## Bước 9: Dừng Services (khi hoàn thành)
@@ -172,9 +185,14 @@ Sau đó chạy:
 
 ### Lỗi: "Network overlaps with other one"
 ```powershell
-# Xóa network cũ
+# Kiểm tra các network hiện có
 docker network ls
+
+# Xóa network cũ nếu conflict (có thể là pack-a-mal-network hoặc service-simulation-module_simulation_network)
+docker network rm pack-a-mal-network
+# Hoặc
 docker network rm service-simulation-module_simulation_network
+
 # Chạy lại
 docker-compose -f docker-compose.network-sim.yml up -d
 ```
