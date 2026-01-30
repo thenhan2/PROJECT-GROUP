@@ -69,6 +69,13 @@ cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_netw
 pip install -e .
 ```
 
+**📝 Lưu ý:** Package này có 2 test scripts:
+
+| Script | Mục đích | Kết quả |
+|--------|----------|---------|
+| `test_network.py` | Test KHÔNG qua INetSim | ❌ Connection failed |
+| `test_with_inetsim.py` | Test CÓ redirect qua INetSim | ✅ 3/3 URLs success |
+
 ---
 
 ## 🎬 PHẦN 3: DEMO TÍNH NĂNG CHÍNH
@@ -78,9 +85,15 @@ pip install -e .
 **Nói với thầy:**
 > "Đầu tiên, em sẽ demo khi KHÔNG bật tính năng Network Simulation. Lúc này, package sẽ cố kết nối tới URL chết và sẽ thất bại."
 
+**Cách 1: Test trực tiếp**
 ```powershell
-# Test KHÔNG có network simulation
 python -c "import malicious_network_package; malicious_network_package.connect_to_dead_url()"
+```
+
+**Cách 2: Dùng test script (khuyên dùng)**
+```powershell
+cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
+python test_network.py
 ```
 
 **✅ Kết quả mong đợi:**
@@ -182,6 +195,78 @@ ok      github.com/ossf/package-analysis/internal/networksim    1.949s
 
 ---
 
+#### Bước 3.2.3: Demo THỰC TẾ Redirect tới INetSim 🎯
+
+**Nói với thầy:**
+> "Bây giờ em sẽ demo thực tế! Em có script test kết nối URL chết qua INetSim proxy."
+
+```powershell
+# Di chuyển vào thư mục package
+cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
+
+# Chạy test script với INetSim
+python test_with_inetsim.py
+```
+
+**✅ Kết quả mong đợi:**
+
+```
+╔════════════════════════════════════════════════════════╗
+║  Dead URL Redirect to INetSim - Demo Script          ║
+║  Yêu cầu 2: Kiểm tra URL alive & redirect INetSim    ║
+╚════════════════════════════════════════════════════════╝
+
+============================================================
+Testing Dead URL WITHOUT INetSim (Should Fail)
+============================================================
+
+[*] Target URL: http://malicious-c2-server.example.com/api/data
+[*] No proxy - direct connection attempt
+
+✓ Connection failed (as expected)
+✓ This confirms the URL is indeed dead
+
+------------------------------------------------------------
+
+============================================================
+Testing Dead URL Redirect to INetSim
+============================================================
+
+[*] INetSim Proxy: http://localhost:8080
+[*] Testing dead URLs...
+
+[*] Testing: http://malicious-c2-server.example.com/api/data
+    ✓ Status: 200
+    ✓ Connected via INetSim!
+    ✓ Response confirmed from INetSim
+
+[*] Testing: http://expired-malware-repo.net/payload.exe
+    ✓ Status: 200
+    ✓ Connected via INetSim!
+    ✓ Response confirmed from INetSim
+
+[*] Testing: http://dead-phishing-site.org/login
+    ✓ Status: 200
+    ✓ Connected via INetSim!
+    ✓ Response confirmed from INetSim
+
+============================================================
+Summary: 3/3 URLs successfully redirected
+============================================================
+
+✓ All dead URLs successfully redirected to INetSim!
+```
+
+**Giải thích cho thầy:**
+- 🔴 **Phần 1 (KHÔNG có proxy)**: URL chết → kết nối thất bại (đúng!)
+- 🟢 **Phần 2 (CÓ INetSim proxy)**: 
+  - 3 URL chết đều kết nối thành công qua INetSim
+  - INetSim giả lập response HTTP 200
+  - Response có signature của INetSim
+  - **ĐÂY CHÍNH LÀ TÍNH NĂNG REDIRECT!**
+
+---
+
 ## 🔍 PHẦN 4: DEMO INTEGRATION THỰC TẾ
 
 ### Demo 4.1: Tích hợp vào Worker Analysis
@@ -273,7 +358,8 @@ code D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_ne
 
 ### Phút 3: Demo không có simulation
 ```powershell
-python -c "import malicious_network_package; malicious_network_package.connect_to_dead_url()"
+cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
+python test_network.py
 ```
 > "Không có simulation → kết nối thất bại"
 
@@ -285,11 +371,12 @@ go test -v
 ```
 > "Code kiểm tra URL alive và redirect. Unit tests pass 100%"
 
-### Phút 5: Show logs INetSim
+### Phút 5: Demo THỰC TẾ redirect tới INetSim ⭐
 ```powershell
-docker logs pack-a-mal-inetsim --tail 50 -f
+cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
+python test_with_inetsim.py
 ```
-> "INetSim đã nhận và xử lý request từ package"
+> "Chạy script test: URL chết kết nối thành công qua INetSim. 3/3 URLs redirected! Đây chính là tính năng của em!"
 
 ---
 
@@ -305,6 +392,15 @@ docker-compose -f docker-compose.network-sim.yml up -d --force-recreate
 ```powershell
 cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
 pip install -e . --force-reinstall
+```
+
+### Nếu test_with_inetsim.py báo lỗi proxy:
+```powershell
+# Kiểm tra INetSim đang chạy
+curl.exe http://localhost:8080
+
+# Nếu không có response → restart Docker
+docker-compose -f docker-compose.network-sim.yml restart inetsim
 ```
 
 ### Nếu Unit tests lỗi:
