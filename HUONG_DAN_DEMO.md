@@ -279,47 +279,106 @@ Summary: 3/3 URLs successfully redirected
 code D:\PROJECT\Project\pack-a-mal\dynamic-analysis\cmd\worker\main.go
 ```
 
-**Tìm và giải thích đoạn code:** (sử dụng Ctrl+F tìm "networksim")
+**Tìm và giải thích đoạn code:** (sử dụng Ctrl+F tìm "networksim", dòng 119-137)
 
 ```go
-// Khởi tạo Network Simulator
-netSimConfig := &networksim.Config{
-    INetSimDNSAddr:  os.Getenv("OSSF_INETSIM_DNS_ADDR"),
-    INetSimHTTPAddr: os.Getenv("OSSF_INETSIM_HTTP_ADDR"),
-    Enabled:         os.Getenv("OSSF_NETWORK_SIMULATION_ENABLED") == "true",
+// Configure network simulation if enabled
+if cfg.networkSimConfig.Enabled {
+    netSim := networksim.New(cfg.networkSimConfig)
+    
+    // Validate INetSim connection before proceeding
+    if err := netSim.ValidateINetSimConnection(ctx); err != nil {
+        slog.WarnContext(ctx, "INetSim validation failed, continuing without network simulation",
+            "error", err)
+    } else {
+        slog.InfoContext(ctx, "Network simulation enabled",
+            "inetsim_dns", netSim.GetINetSimDNS(),
+            "inetsim_http", netSim.GetINetSimHTTP())
+        
+        // Configure sandbox to use INetSim DNS servers
+        dnsServers := netSim.GetDNSServers()
+        sandboxOpts = append(sandboxOpts, sandbox.DNSServers(dnsServers...))
+        
+        slog.InfoContext(ctx, "Sandbox configured with custom DNS",
+            "dns_servers", dnsServers)
+    }
 }
-networkSim := networksim.New(netSimConfig)
+```
 
-// Sử dụng trong analysis
-if networkSim.ShouldRedirectToINetSim(ctx, packageURL) {
-    // Cấu hình DNS để redirect tới INetSim
-    dnsServers := networkSim.GetDNSServers()
-    // ... apply to sandbox
+**Giải thích cho thầy từng bước:**
+1. **Kiểm tra config**: Nếu `Enabled = true` → bật network simulation
+2. **Tạo NetworkSimulator**: Khởi tạo với config (DNS, HTTP addresses)
+3. **Validate INetSim**: Kiểm tra INetSim có chạy không
+4. **Configure DNS**: Lấy DNS servers của INetSim (`172.20.0.2`)
+5. **Áp dụng vào sandbox**: Package sẽ dùng DNS này khi chạy
+
+**Xem cấu hình trong config.go:**
+```powershell
+code D:\PROJECT\Project\pack-a-mal\dynamic-analysis\cmd\worker\config.go
+```
+
+**Tìm dòng 69-86 - đọc environment variables:**
+```go
+// Parse network simulation configuration from environment
+netSimConfig := networksim.DefaultConfig()
+
+if os.Getenv("OSSF_NETWORK_SIMULATION_ENABLED") == "true" {
+    netSimConfig.Enabled = true
+}
+
+if dnsAddr := os.Getenv("OSSF_INETSIM_DNS_ADDR"); dnsAddr != "" {
+    netSimConfig.INetSimDNSAddr = dnsAddr
+}
+
+if httpAddr := os.Getenv("OSSF_INETSIM_HTTP_ADDR"); httpAddr != "" {
+    netSimConfig.INetSimHTTPAddr = httpAddr
 }
 ```
 
 ### Demo 4.2: Kiểm tra Logs của INetSim
 
 **Nói với thầy:**
-> "Khi package kết nối tới URL chết, INetSim sẽ ghi lại logs. Cho em show logs."
+> "Khi package kết nối qua INetSim, logs sẽ được ghi lại. Cho em demo."
 
+**Mở 2 terminals:**
+
+**Terminal 1 - Xem logs realtime:**
 ```powershell
-# Xem logs realtime của INetSim
-docker logs pack-a-mal-inetsim --tail 50 -f
+docker logs pack-a-mal-inetsim -f
 ```
 
-**Sau đó chạy package (ở terminal khác):**
+**Terminal 2 - Chạy test với INetSim:**
 ```powershell
-python -c "import malicious_network_package; malicious_network_package.connect_to_dead_url()"
+cd D:\PROJECT\Project\pack-a-mal\dynamic-analysis\sample_packages\malicious_network_package
+python test_with_inetsim.py
 ```
 
-**✅ Trong logs INetSim sẽ thấy:**
+**✅ Kết quả trong Terminal 2:**
 ```
-[INetSim] DNS request for malicious-c2-server.example.com
-[INetSim] Returning IP: 172.20.0.2
-[INetSim] HTTP GET /api/data from ...
-[INetSim] Serving default HTTP response
+[*] Testing: http://malicious-c2-server.example.com/api/data
+    ✓ Status: 200
+    ✓ Connected via INetSim!
 ```
+
+**✅ Đồng thời trong Terminal 1 (logs) sẽ thấy:**
+```
+INetSim: Service started. (HTTP, 0.0.0.0:80, pid 14)
+```
+
+**Hoặc xem logs chi tiết hơn trong file:**
+```powershell
+# Xem service logs
+Get-Content D:\PROJECT\Project\pack-a-mal\service-simulation-module\shared\logs\inetsim\service.log -Tail 20
+
+# Xem main logs
+Get-Content D:\PROJECT\Project\pack-a-mal\service-simulation-module\shared\logs\inetsim\main.log -Tail 20
+```
+
+**✅ Logs sẽ chứa thông tin:**
+- HTTP requests đến từ package
+- URLs được truy cập
+- Responses được trả về
+- Timestamps của mỗi connection
 
 ---
 
