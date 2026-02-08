@@ -128,7 +128,6 @@ ecosystemMap := map[string]string{
 }
 ```
 
-### 3.2. Component 2: Web API (Django)
 
 **File Modified:**
 - `web/packamal/package_analysis/views.py`
@@ -228,7 +227,6 @@ class PURLParser:
 - ✅ Latest version resolution (no @version)
 - ✅ Backward compatible với `-ecosystem`, `-package`, `-version`
 
-#### Web API:
 - ✅ `/api/v1/analyze/` endpoint accepts pURL
 - ✅ pURL validation
 - ✅ Backward compatible với old parameters
@@ -316,7 +314,7 @@ class PURLParser:
 - Lines: 220-295 (pURL parsing logic)
 - Flag definition: Line 33
 
-### 5.3. Web API Implementation
+
 
 **Technology Stack:**
 - Framework: Django 5.1+
@@ -420,7 +418,7 @@ pURL: pkg:npm/express@4.18.0
 All tests passed! ✅
 ```
 
-### 6.3. Test Results - Web API
+
 
 **Test Method:** Manual testing với curl và Python scripts
 
@@ -735,8 +733,7 @@ pack-a-mal/
 ./analyze -purl "pkg:maven/org.springframework/spring-core@6.0.0"
 ```
 
-**Web API:**
-```bash
+
 # Analyze request
 curl -X POST http://localhost:8000/api/v1/analyze/ \
   -H "Content-Type: application/json" \
