@@ -1,0 +1,167 @@
+# Decision Rules Configuration for Half Mode
+# These rules determine how traffic is handled in Half Mode
+
+# Rules are evaluated in priority order (higher priority first)
+# First matching rule is applied
+
+rules:
+  # HIGH PRIORITY - Security Rules
+  
+  - name: "block_known_c2_servers"
+    priority: 100
+    enabled: true
+    description: "Block known Command & Control servers"
+    condition:
+      type: "domain_blacklist"
+      domains:
+        - "*.malware-c2.com"
+        - "*.evil-botnet.net"
+        - "192.168.1.100"
+        - "suspicious-domain.xyz"
+    action: "block"
+  
+  - name: "block_suspicious_tlds"
+    priority: 95
+    enabled: true
+    description: "Block suspicious top-level domains"
+    condition:
+      type: "domain_pattern"
+      domain_pattern: ".*\\.(xyz|top|tk|ml|ga)$"
+    action: "block"
+  
+  # MEDIUM PRIORITY - Selective Forwarding
+  
+  - name: "allow_legitimate_cdns"
+    priority: 90
+    enabled: true
+    description: "Allow legitimate CDN services"
+    condition:
+      type: "domain_whitelist"
+      domains:
+        - "*.cloudflare.com"
+        - "*.akamai.com"
+        - "*.fastly.com"
+        - "*.cloudfront.net"
+    action: "forward"
+  
+  - name: "allow_package_registries"
+    priority: 85
+    enabled: true
+    description: "Allow package registry domains"
+    condition:
+      type: "domain_whitelist"
+      domains:
+        - "*.pypi.org"
+        - "*.npmjs.com"
+        - "*.rubygems.org"
+        - "*.packagist.org"
+    action: "forward"
+  
+  # EXECUTABLE HANDLING
+  
+  - name: "intercept_windows_executables"
+    priority: 80
+    enabled: true
+    description: "Intercept and sandbox Windows executables"
+    condition:
+      type: "file_extension"
+      file_extensions:
+        - ".exe"
+        - ".dll"
+        - ".msi"
+        - ".scr"
+    action: "modify"
+    modifier:
+      type: "sandbox_executable"
+      save_original: true
+      replace_with: "honeypot"
+  
+  - name: "intercept_scripts"
+    priority: 79
+    enabled: true
+    description: "Intercept and sandbox scripts"
+    condition:
+      type: "file_extension"
+      file_extensions:
+        - ".ps1"
+        - ".sh"
+        - ".bat"
+        - ".cmd"
+        - ".vbs"
+    action: "modify"
+    modifier:
+      type: "sandbox_executable"
+      save_original: true
+      replace_with: "honeypot"
+  
+  # DATA EXFILTRATION MONITORING
+  
+  - name: "monitor_large_uploads"
+    priority: 70
+    enabled: true
+    description: "Monitor large POST requests for data exfiltration"
+    condition:
+      type: "upload_detection"
+      method: "POST"
+      min_size: 1048576  # 1MB
+    action: "modify"
+    modifier:
+      type: "content_logging"
+      log_full_content: true
+      strip_pii: true
+  
+  - name: "monitor_suspicious_uploads"
+    priority: 69
+    enabled: true
+    description: "Monitor uploads to suspicious paths"
+    condition:
+      type: "method"
+      method: "POST"
+    action: "modify"
+    modifier:
+      type: "content_logging"
+      log_full_content: true
+  
+  # PROTOCOL BLOCKING
+  
+  - name: "block_irc_protocol"
+    priority: 60
+    enabled: true
+    description: "Block IRC protocol (commonly used by malware)"
+    condition:
+      type: "protocol"
+      protocol: "IRC"
+    action: "block"
+  
+  - name: "block_telnet_protocol"
+    priority: 59
+    enabled: true
+    description: "Block Telnet protocol"
+    condition:
+      type: "protocol"
+      protocol: "Telnet"
+    action: "block"
+  
+  # CONTENT TYPE FILTERING
+  
+  - name: "sandbox_application_executables"
+    priority: 50
+    enabled: true
+    description: "Sandbox executable content types"
+    condition:
+      type: "content_type"
+      content_type: "application/x-msdownload"
+    action: "modify"
+    modifier:
+      type: "sandbox_executable"
+      save_original: true
+  
+  # DEFAULT RULE (LOWEST PRIORITY)
+  
+  - name: "default_simulate"
+    priority: 1
+    enabled: true
+    description: "Default action - simulate all unmatched traffic"
+    condition:
+      type: "default"
+    action: "simulate"

@@ -1,0 +1,99 @@
+# Network Mode Configuration
+# This file configures the Network Mode Controller for Pack-A-Mal
+
+# Network Mode: "full" or "half"
+# - full: Complete isolation, no external traffic (SAFEST)
+# - half: Transparent proxy with selective forwarding (ADVANCED)
+network_mode:
+  mode: "full"  # Default to Full Mode for safety
+
+  # Full Mode Configuration
+  full_mode:
+    # Complete Isolation - Block ALL external traffic
+    complete_isolation: true
+    
+    # Capture PCAP for all traffic
+    capture_pcap: true
+    
+    # Service Configuration - Which service handles which protocol
+    services:
+      dns: "inetsim"
+      dns_address: "172.20.0.2:53"
+      
+      http: "fakenet-ng"
+      http_address: "172.20.0.3:80"
+      
+      https: "fakenet-ng"
+      https_address: "172.20.0.3:443"
+      
+      smtp: "inetsim"
+      smtp_address: "172.20.0.2:25"
+      
+      ftp: "inetsim"
+      ftp_address: "172.20.0.2:21"
+
+  # Half Mode Configuration (ADVANCED - Use with caution)
+  half_mode:
+    # Enabled - Must be explicitly enabled
+    # WARNING: This allows selective external internet access
+    enabled: false
+    
+    # Default Action - What to do when no rule matches
+    # Options: forward, block, modify, simulate
+    default_action: "simulate"
+    
+    # External Request Timeout
+    external_request_timeout: 10s
+    
+    # Proxy Configuration
+    proxy:
+      transparent: true
+      listen_address: "0.0.0.0:8888"
+      dns_interception: true
+      ssl_interception: true
+      ssl_cert_path: "/certs/proxy-ca.crt"
+      ssl_key_path: "/certs/proxy-ca.key"
+    
+    # Decision Rules File (optional)
+    # decision_rules_file: "/config/decision-rules.yaml"
+    
+    # Domain Whitelist (always forward)
+    whitelist:
+      - "*.cloudflare.com"
+      - "*.akamai.com"
+    
+    # Domain Blacklist (always block)
+    blacklist:
+      - "*.malware-c2.com"
+      - "*.evil-domain.net"
+    
+    # Traffic Modifier Configuration
+    traffic_modifier:
+      enabled: true
+      strip_auth_headers: true
+      inject_tracking_headers: true
+      sandbox_executables: true
+      sandbox_dir: "/logs/executables"
+      max_response_size: 10485760  # 10MB
+
+  # Logging Configuration
+  logging:
+    level: "info"  # debug, info, warn, error
+    
+    # PCAP Capture
+    capture_pcap: true
+    pcap_file: "/logs/traffic.pcap"
+    
+    # Request/Response Logging
+    log_all_requests: true
+    log_responses: true
+    
+    # Decision Logging (Half Mode)
+    log_decisions: true
+    decisions_file: "/logs/decisions.log"
+    
+    # Traffic Modification Logging
+    log_modifications: true
+    
+    # Traffic Log File
+    traffic_log_file: "/logs/traffic.log"
