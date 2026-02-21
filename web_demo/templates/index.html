@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pack-a-mal · Network Simulation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+/* ── Reset & Base ────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f18;
+  --surface:#161927;
+  --card:#1c2033;
+  --border:#262c42;
+  --accent:#6c63ff;
+  --accent2:#00d4ff;
+  --green:#22c55e;
+  --red:#ef4444;
+  --yellow:#f59e0b;
+  --text:#e2e8f0;
+  --muted:#8892b0;
+  --font:'Inter',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+
+/* ── Animated background ─────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 20%,rgba(108,99,255,.12) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 80%,rgba(0,212,255,.08) 0%,transparent 60%);
+  pointer-events:none;z-index:0
+}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.wrap{max-width:1280px;margin:0 auto;padding:30px 20px;position:relative;z-index:1}
+
+/* ── Header ─────────────────────────────────────────────── */
+.header{text-align:center;margin-bottom:48px}
+.header .logo{display:inline-flex;align-items:center;gap:12px;margin-bottom:16px}
+.header .logo-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;
+  box-shadow:0 0 30px rgba(108,99,255,.4)}
+.header h1{font-size:2.4rem;font-weight:700;background:linear-gradient(90deg,#fff 0%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--muted);font-size:1.05rem;margin-top:8px}
+
+/* ── Status bar ─────────────────────────────────────────── */
+.status-bar{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 24px;display:flex;align-items:center;gap:24px;margin-bottom:32px;flex-wrap:wrap}
+.status-item{display:flex;align-items:center;gap:8px;font-size:.9rem}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot.green{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot.gray{background:var(--muted)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.status-bar .ms-auto{margin-left:auto}
+
+/* ── Grid ─────────────────────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;
+  transition:border-color .3s,box-shadow .3s}
+.card:hover{border-color:rgba(108,99,255,.4);box-shadow:0 8px 30px rgba(108,99,255,.1)}
+.card-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.card-head .step{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0}
+.card-head h3{font-size:.95rem;font-weight:600;color:var(--text)}
+.card-head .tag{margin-left:auto;font-size:.75rem;padding:3px 10px;border-radius:20px;border:1px solid;font-weight:500}
+.tag-blue{color:var(--accent2);border-color:rgba(0,212,255,.3)}
+.tag-green{color:var(--green);border-color:rgba(34,197,94,.3)}
+.card-body{padding:20px 22px}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:10px;
+  font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:all .25s;font-family:var(--font)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;box-shadow:0 4px 14px rgba(108,99,255,.35)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,.5)}
+.btn-cyan{background:linear-gradient(135deg,#0891b2,var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(0,212,255,.25)}
+.btn-cyan:hover:not(:disabled){transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,#16a34a,var(--green));color:#fff;box-shadow:0 4px 14px rgba(34,197,94,.25)}
+.btn-green:hover:not(:disabled){transform:translateY(-1px)}
+.btn-red{background:linear-gradient(135deg,#dc2626,var(--red));color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.25)}
+.btn-red:hover:not(:disabled){transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover:not(:disabled){background:rgba(255,255,255,.1)}
+.btn-sm{padding:6px 14px;font-size:.8rem}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ── Terminal output ─────────────────────────────────────── */
+.terminal{background:#0a0c14;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:14px}
+.terminal-bar{padding:8px 14px;background:#111420;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.tbar-dot{width:11px;height:11px;border-radius:50%}
+.tb-red{background:#ff5f56}.tb-yellow{background:#ffbd2e}.tb-green{background:#27c93f}
+.terminal-bar span{margin-left:auto;font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.terminal-out{padding:14px 18px;font-family:var(--mono);font-size:.8rem;line-height:1.7;
+  min-height:80px;max-height:360px;overflow-y:auto;color:#c9d1d9;white-space:pre-wrap;word-break:break-all}
+.terminal-out::-webkit-scrollbar{width:6px}
+.terminal-out::-webkit-scrollbar-track{background:transparent}
+.terminal-out::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.line-ok{color:var(--green)}
+.line-err{color:var(--red)}
+.line-info{color:var(--accent2)}
+.line-warn{color:var(--yellow)}
+
+/* ── Mode cards ─────────────────────────────────────────── */
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:700px){.mode-grid{grid-template-columns:1fr}}
+.mode-btn{background:var(--surface);border:2px solid var(--border);border-radius:14px;
+  padding:18px 16px;cursor:pointer;transition:all .25s;text-align:left}
+.mode-btn:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(108,99,255,.2)}
+.mode-btn.active-full{border-color:var(--red) !important;box-shadow:0 0 20px rgba(239,68,68,.2)}
+.mode-btn.active-half{border-color:#f97316 !important;box-shadow:0 0 20px rgba(249,115,22,.2)}
+.mode-icon{font-size:1.8rem;margin-bottom:8px}
+.mode-title{font-size:.85rem;font-weight:600;margin-bottom:4px}
+.mode-sub{font-size:.75rem;color:var(--muted)}
+
+/* ── Mode detail ─────────────────────────────────────────── */
+.mode-detail{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;display:none}
+.mode-detail.show{display:block;animation:fadeIn .3s ease}
+.mode-detail h4{font-size:1.05rem;font-weight:700;margin-bottom:14px}
+.detail-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem}
+.detail-row:last-child{border-bottom:none}
+.detail-row .label{color:var(--muted);width:120px;flex-shrink:0}
+.flow-list{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.flow-list li{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted)}
+.flow-list li::before{content:'→';color:var(--accent);font-weight:700}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+
+/* ── Package info ─────────────────────────────────────────── */
+.pkg-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.pkg-url{font-family:var(--mono);font-size:.78rem;color:var(--red);
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  border-radius:6px;padding:6px 10px;margin:4px 0;display:block}
+.file-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:.85rem}
+.file-row:last-child{border-bottom:none}
+
+/* ── Demo compare (interactive) ─────────────────────────── */
+.mode-toggle-row{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.mode-toggle-group{display:flex;gap:6px}
+.mtbtn{padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.83rem;font-weight:600;
+  border:2px solid var(--border);background:var(--surface);color:var(--muted);transition:all .2s}
+.mtbtn:hover{border-color:var(--accent)}
+.mtbtn.active-half{border-color:#f97316;background:rgba(249,115,22,.12);color:#fb923c}
+.mtbtn.active-full{border-color:var(--red);background:rgba(239,68,68,.12);color:#f87171}
+.demo-url-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap}
+.demo-url-bar code{font-family:var(--mono);font-size:.78rem;color:var(--accent2);flex:1}
+.resp-grid{display:grid;grid-template-columns:1fr 48px 1fr;gap:0;align-items:start}
+@media(max-width:800px){.resp-grid{grid-template-columns:1fr;gap:12px}}
+.resp-panel{border-radius:12px;overflow:hidden;border:2px solid var(--border);transition:border-color .3s}
+.resp-panel.rp-before{border-color:rgba(139,92,246,.3)}
+.resp-panel.rp-after{border-color:rgba(34,197,94,.25)}
+.resp-panel.rp-after.has-error{border-color:rgba(239,68,68,.3)}
+.resp-panel-head{padding:11px 16px;font-size:.8rem;font-weight:600;display:flex;align-items:center;
+  gap:8px;border-bottom:1px solid var(--border)}
+.rp-before .resp-panel-head{background:rgba(139,92,246,.08);color:#c4b5fd}
+.rp-after .resp-panel-head{background:rgba(34,197,94,.07);color:var(--green)}
+.rp-after.has-error .resp-panel-head{background:rgba(239,68,68,.07);color:var(--red)}
+.resp-body-inner{padding:16px;min-height:180px;font-size:.78rem}
+.rp-placeholder{color:var(--muted);font-family:var(--font);font-size:.82rem}
+.rp-loading{color:var(--muted);font-family:var(--font);font-size:.82rem;display:flex;align-items:center;gap:8px}
+.resp-status-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.resp-status-badge{padding:4px 12px;border-radius:6px;font-size:.78rem;font-weight:700}
+.status-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.status-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.resp-inetsim-badge{padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:600;
+  background:rgba(0,212,255,.12);color:var(--accent2);border:1px solid rgba(0,212,255,.25)}
+.resp-headers{margin-bottom:10px;display:flex;flex-direction:column;gap:4px}
+.resp-hdr-row{display:flex;gap:8px;font-size:.75rem}
+.hdr-k{color:var(--muted);width:110px;flex-shrink:0}
+.hdr-v{color:var(--text);font-family:var(--mono)}
+.resp-body-preview{background:rgba(0,0,0,.3);border-radius:6px;padding:8px;
+  font-size:.71rem;color:#8fbcbb;max-height:90px;overflow:hidden;white-space:pre-wrap;word-break:break-all;font-family:var(--mono)}
+.resp-error-msg{color:var(--red);font-size:.78rem;margin-bottom:8px;word-break:break-all;font-family:var(--mono)}
+.resp-footnote{font-size:.72rem;color:var(--muted);font-family:var(--font);margin-top:8px}
+.resp-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:180px;gap:6px}
+.resp-arrow i{font-size:1.1rem;color:var(--accent)}
+.arrow-label{font-size:.63rem;color:var(--muted);text-align:center;line-height:1.4}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .8s linear infinite}
+.fade-in{animation:fadeIn .4s ease}
+
+/* ── Misc helpers ─────────────────────────────────────────── */
+.mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-20{margin-top:20px}.mb-16{margin-bottom:16px}
+.muted{color:var(--muted);font-size:.85rem}
+.flex{display:flex}.gap-8{gap:8px}.gap-12{gap:12px}.ai-center{align-items:center}
+.section-sep{height:1px;background:var(--border);margin:28px 0}
+.loading-bar{height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:2px;width:0%;transition:width .4s;margin-top:10px}
+
+/* ── scrollbar global ─────────────────────────────────────── */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#2a2f45;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-shield-virus"></i></div>
+    </div>
+    <h1>Pack-a-mal Network Simulation</h1>
+    <p>Phân tích hành vi mạng của package – Demo Dashboard</p>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="dot gray" id="dot-inetsim"></div>
+      <span>INetSim</span>
+    </div>
+    <div class="status-item">
+      <div class="dot gray" id="dot-api"></div>
+      <span>Service API</span>
+    </div>
+    <div class="status-item" style="color:var(--muted);font-size:.8rem">
+      <i class="fas fa-circle-notch spin" id="status-spinner" style="display:none;color:var(--accent)"></i>
+      <span id="status-text">Chưa kiểm tra</span>
+    </div>
+    <button class="btn btn-ghost btn-sm ms-auto" onclick="checkStatus()" id="btn-refresh" style="margin-left:auto">
+      <i class="fas fa-rotate-right"></i> Refresh
+    </button>
+  </div>
+
+  <!-- ROW 1: Docker + Package Info -->
+  <div class="grid-2 mb-16">
+
+    <!-- CARD: Docker Services -->
+    <div class="card fade-in">
+      <div class="card-head">
+        <div class="step">01</div>
+        <h3>Docker Services</h3>
+        <span class="tag tag-blue">INetSim + API</span>
+      </div>
+      <div class="card-body">
+        <p class="muted" style="margin-bottom:14px">Khởi động môi trường giả lập mạng để capture traffic của malware.</p>
+        <div class="btn-group">
+          <button class="btn btn-green" onclick="dockerAction('start')" id="btn-start">
+            <i class="fas fa-play"></i> Start Services
+          </button>
+          <button class="btn btn-red" onclick="dockerAction('stop')" id="btn-stop">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="checkStatus()">
+            <i class="fas fa-list"></i> Status
+          </button>
+        </div>
+        <div class="terminal mt-12">
+          <div class="terminal-bar">
+            <span class="tbar-dot tb-red"></span>
+            <span class="tbar-dot tb-yellow"></span>
+            <span class="tbar-dot tb-green"></span>
+            <span id="docker-label">docker-compose</span>
+          </div>
+          <div class="terminal-out" id="docker-out">$ _</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Package Info -->
+    <div class="card fade-in">
+      <div class="card-head">
+        <div class="step"><i class="fas fa-box" style="font-size:.7rem"></i></div>
+        <h3>Package Demo</h3>
+        <span class="tag tag-green">malicious-network-package</span>
+      </div>
+      <div class="card-body">
+        <div class="pkg-box" id="pkg-box">
+          <div class="flex gap-12 ai-center mb-16">
+            <div style="font-size:2rem">📦</div>
+            <div>
+              <div style="font-weight:600;font-size:.95rem" id="pkg-name">malicious-network-package</div>
+              <div class="muted" id="pkg-ver">v0.1.0</div>
+            </div>
+            <span class="badge badge-red" style="margin-left:auto">Malware Sample</span>
+          </div>
+          <div class="muted" style="font-size:.82rem;margin-bottom:10px" id="pkg-desc">
+            Package giả lập hành vi malware – cố gắng kết nối tới C2 servers
+          </div>
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">🎯 Target URLs:</div>
+          <div id="pkg-urls">
+            <code class="pkg-url">http://malicious-c2-server.example.com/api/data</code>
+            <code class="pkg-url">http://evil-domain.net/payload</code>
+            <code class="pkg-url">http://dead-c2-server.com/beacon</code>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="file-row">
+            <span><i class="fas fa-file-code" style="color:var(--red);margin-right:6px"></i>test_network.py</span>
+            <span class="badge badge-red">Không có sim → Fail</span>
+          </div>
+          <div class="file-row">
+            <span><i class="fas fa-file-code" style="color:var(--green);margin-right:6px"></i>test_with_inetsim.py</span>
+            <span class="badge badge-green">Có INetSim → Pass</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD: Test Services -->
+  <div class="card fade-in mb-16">
+    <div class="card-head">
+      <div class="step">02</div>
+      <h3>Kiểm tra Services</h3>
+      <span class="tag tag-blue">Health Check</span>
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <div class="muted mb-16">Test INetSim HTTP service (port 8080)</div>
+          <button class="btn btn-cyan" onclick="testSvc('http')" id="btn-http">
+            <i class="fas fa-globe"></i> Test INetSim HTTP
+          </button>
+          <div class="terminal mt-12">
+            <div class="terminal-bar">
+              <span class="tbar-dot tb-red"></span><span class="tbar-dot tb-yellow"></span><span class="tbar-dot tb-green"></span>
+              <span>curl localhost:8080</span>
+            </div>
+            <div class="terminal-out" id="http-out" style="min-height:60px">$ _</div>
+          </div>
+        </div>
+        <div>
+          <div class="muted mb-16">Test Simulation API service (port 5000)</div>
+          <button class="btn btn-cyan" onclick="testSvc('api')" id="btn-api">
+            <i class="fas fa-cogs"></i> Test Simulation API
+          </button>
+          <div class="terminal mt-12">
+            <div class="terminal-bar">
+              <span class="tbar-dot tb-red"></span><span class="tbar-dot tb-yellow"></span><span class="tbar-dot tb-green"></span>
+              <span>curl localhost:5000/status</span>
+            </div>
+            <div class="terminal-out" id="api-out" style="min-height:60px">$ _</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD: Demo Interactive Compare -->
+  <div class="card fade-in mb-16">
+    <div class="card-head">
+      <div class="step">03</div>
+      <h3>Demo Network Simulation</h3>
+      <span class="tag tag-blue" id="demo-mode-label">Half Mode</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Mode toggle -->
+      <div class="mode-toggle-row">
+        <span class="muted" style="font-size:.82rem">Chọn mode để demo:</span>
+        <div class="mode-toggle-group">
+          <button class="mtbtn active-half" id="mtb-half" onclick="setDemoMode('half')">🟠 Half Mode</button>
+          <button class="mtbtn" id="mtb-full" onclick="setDemoMode('full')">🔴 Full Mode</button>
+        </div>
+      </div>
+
+      <!-- URL bar -->
+      <div class="demo-url-bar">
+        <span style="font-size:.75rem;color:var(--muted);white-space:nowrap">URL đang test:</span>
+        <code id="compare-url">http://malicious-c2-server.example.com/api/data</code>
+        <span class="badge badge-red" id="url-badge">Dead URL</span>
+      </div>
+
+      <!-- Run -->
+      <div style="margin:16px 0 20px 0">
+        <button class="btn btn-primary" id="btn-compare" onclick="runCompare()">
+          <i class="fas fa-play"></i>&nbsp; Chạy So Sánh
+        </button>
+      </div>
+
+      <!-- Response panels -->
+      <div class="resp-grid">
+        <div class="resp-panel rp-before" id="panel-before">
+          <div class="resp-panel-head">
+            <i class="fas fa-circle-dot"></i> Trước — Không có Mode
+          </div>
+          <div class="resp-body-inner" id="body-before">
+            <div class="rp-placeholder">Nhấn "Chạy So Sánh" để bắt đầu</div>
+          </div>
+        </div>
+
+        <div class="resp-arrow">
+          <i class="fas fa-arrow-right"></i>
+          <div class="arrow-label" id="arrow-label">🟠 HALF<br>MODE</div>
+        </div>
+
+        <div class="resp-panel rp-after" id="panel-after">
+          <div class="resp-panel-head">
+            <i class="fas fa-shield-halved"></i> Sau — Mode Đang Bật
+          </div>
+          <div class="resp-body-inner" id="body-after">
+            <div class="rp-placeholder">Nhấn "Chạy So Sánh" để bắt đầu</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ROW 3: Go Tests + Network Mode -->
+  <div class="grid-2 mb-16">
+
+    <!-- CARD: Go Unit Tests -->
+    <div class="card fade-in">
+      <div class="card-head">
+        <div class="step">04</div>
+        <h3>Go Unit Tests</h3>
+        <span class="tag tag-blue">networksim</span>
+      </div>
+      <div class="card-body">
+        <p class="muted mb-16">
+          Kiểm tra logic <code style="color:var(--accent2)">IsURLAlive()</code>
+          và <code style="color:var(--accent2)">ShouldRedirectToINetSim()</code>
+        </p>
+        <button class="btn btn-primary" onclick="runGoTest()" id="btn-gotest">
+          <i class="fab fa-golang" style="font-size:1rem"></i> go test -v
+        </button>
+        <div class="terminal mt-12">
+          <div class="terminal-bar">
+            <span class="tbar-dot tb-red"></span><span class="tbar-dot tb-yellow"></span><span class="tbar-dot tb-green"></span>
+            <span id="go-label">go test -v ./...</span>
+          </div>
+          <div class="terminal-out" id="go-out">$ go test -v</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Network Modes -->
+    <div class="card fade-in">
+      <div class="card-head">
+        <div class="step">05</div>
+        <h3>Network Modes</h3>
+        <span class="tag tag-blue">2 chế độ</span>
+      </div>
+      <div class="card-body">
+        <div class="mode-grid">
+          <div class="mode-btn" id="mb-full" onclick="loadMode('full')">
+            <div class="mode-icon">🔴</div>
+            <div class="mode-title">Full Mode</div>
+            <div class="mode-sub">Cách ly hoàn toàn</div>
+          </div>
+          <div class="mode-btn" id="mb-half" onclick="loadMode('half')">
+            <div class="mode-icon">🟠</div>
+            <div class="mode-title">Half Mode</div>
+            <div class="mode-sub">Chặn dead URLs</div>
+          </div>
+        </div>
+        <div class="mode-detail" id="mode-detail"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function colorize(text) {
+  if (!text) return '';
+  text = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if (/(PASS|SUCCESS|✅|healthy|running|OK|Started)/i.test(text))  return `<span class="line-ok">${text}</span>`;
+  if (/(FAIL|fail|Error|error|refused|❌|Cannot|cannot|not alive|dead)/i.test(text)) return `<span class="line-err">${text}</span>`;
+  if (/(RUN|INFO|Checking|Waiting|Starting|Redirect|Creating|Network)/i.test(text)) return `<span class="line-info">${text}</span>`;
+  if (/(WARN|Warning)/i.test(text)) return `<span class="line-warn">${text}</span>`;
+  return text;
+}
+
+function appendLine(elId, text, raw=false) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const html = raw ? text : colorize(text);
+  el.innerHTML += html + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearOut(elId, msg='') {
+  const el = document.getElementById(elId); if(el) el.innerHTML = msg;
+}
+
+function setBtn(id, disabled) {
+  const b = document.getElementById(id); if(b) b.disabled = disabled;
+}
+
+// ── SSE stream helper ─────────────────────────────────────────────────────────
+function streamTo(url, outId, {label, labelId, onDone} = {}) {
+  clearOut(outId, '');
+  if(labelId) document.getElementById(labelId).textContent = label || '';
+  let _fired = false;
+  const _done = (ok) => { if(_fired) return; _fired = true; if(onDone) onDone(ok); };
+  const es = new EventSource(url);
+  es.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if(msg.startsWith('__DONE__:')) {
+      const rc = msg.split(':')[1];
+      const ok = rc === '0';
+      appendLine(outId, ok ? '\n✅ Completed (exit 0)' : `\n❌ Exit code: ${rc}`);
+      es.close();
+      _done(ok);
+    } else if(msg.startsWith('__ERROR__:')) {
+      appendLine(outId, '\n❌ ' + msg.slice(8));
+      es.close(); _done(false);
+    } else {
+      appendLine(outId, msg);
+    }
+  };
+  es.onerror = () => { es.close(); appendLine(outId, '\n⚠ Stream closed'); _done(false); };
+  return es;
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+function setDot(id, state){ // 'green' | 'red' | 'gray'
+  const d = document.getElementById(id);
+  if(d) d.className = 'dot ' + state;
+}
+
+async function checkStatus() {
+  const spinner = document.getElementById('status-spinner');
+  const txtEl   = document.getElementById('status-text');
+  if(spinner) spinner.style.display = 'inline-block';
+  setBtn('btn-refresh', true);
+  try {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 8000);
+    const r    = await fetch('/api/docker/status', {signal: ctrl.signal}).then(x => x.json());
+    clearTimeout(tid);
+    const inetOk = r.containers.some(c => c.name.includes('inetsim') &&
+      (c.status.includes('healthy') || c.status.toLowerCase().startsWith('up')));
+    const apiOk  = r.containers.some(c => c.name.includes('sim-api') &&
+      (c.status.includes('healthy') || c.status.toLowerCase().startsWith('up')));
+    setDot('dot-inetsim', inetOk ? 'green' : 'red');
+    setDot('dot-api',     apiOk  ? 'green' : 'red');
+    if(txtEl) txtEl.textContent = r.running
+      ? '\u2705 Services \u0111ang ch\u1ea1y'
+      : (r.containers.length === 0 ? '\u23f9 Services ch\u01b0a kh\u1edfi \u0111\u1ed9ng' : '\u26a0 Services kh\u00f4ng healthy');
+    return r.running;
+  } catch(e) {
+    const msg = e.name === 'AbortError' ? '\u23f1 Qu\u00e1 l\u00e2u \u2014 th\u1eed l\u1ea1i' : '\u26a0 Kh\u00f4ng k\u1ebft n\u1ed1i \u0111\u01b0\u1ee3c Docker';
+    if(txtEl) txtEl.textContent = msg;
+    setDot('dot-inetsim','gray'); setDot('dot-api','gray');
+    return null;
+  } finally {
+    if(spinner) spinner.style.display = 'none';
+    setBtn('btn-refresh', false);
+  }
+}
+
+// ── Docker ────────────────────────────────────────────────────────
+let _pollTimer = null;
+
+async function pollUntilChanged(expectRunning, maxTries, delayMs) {
+  if(_pollTimer) clearTimeout(_pollTimer);
+  let left = maxTries || 6;
+  const tick = async () => {
+    const running = await checkStatus();
+    left--;
+    if(running === expectRunning || left <= 0) { _pollTimer = null; return; }
+    _pollTimer = setTimeout(tick, delayMs || 3000);
+  };
+  _pollTimer = setTimeout(tick, 1500); // first check sau 1.5s
+}
+
+function dockerAction(action) {
+  setBtn('btn-start', true); setBtn('btn-stop', true);
+  streamTo(`/api/docker/${action}`, 'docker-out', {
+    labelId: 'docker-label',
+    label: action === 'start' ? 'docker-compose up -d' : 'docker-compose down',
+    onDone: ok => {
+      setBtn('btn-start', false); setBtn('btn-stop', false);
+      pollUntilChanged(action === 'start', 6, 3000);
+    }
+  });
+}
+
+// ── Test Services ─────────────────────────────────────────────────────────────
+async function testSvc(svc) {
+  const btnId = svc === 'http' ? 'btn-http' : 'btn-api';
+  const outId = svc === 'http' ? 'http-out' : 'api-out';
+  setBtn(btnId, true);
+  clearOut(outId, `Đang kiểm tra ${svc === 'http' ? 'localhost:8080' : 'localhost:5000'}...`);
+  try {
+    const r = await fetch(`/api/test/${svc}`).then(x=>x.json());
+    clearOut(outId, '');
+    appendLine(outId, r.ok ? `✅ ${r.label} - OK` : `❌ ${r.label} - FAILED`);
+    appendLine(outId, '─'.repeat(40));
+    appendLine(outId, r.out || r.err || '(no output)');
+    if(svc === 'http') setDot('dot-inetsim', r.ok ? 'green' : 'red');
+    else setDot('dot-api', r.ok ? 'green' : 'red');
+  } catch(e) {
+    clearOut(outId, '❌ ERROR: ' + e.message);
+  } finally { setBtn(btnId, false); }
+}
+
+// ── Demo Package ──────────────────────────────────────────────────────────────
+// ── Demo Compare ─────────────────────────────────────────────────────────────
+let _demoMode = 'half';
+const _demoCfg = {
+  half: { url:'http://malicious-c2-server.example.com/api/data', badge:'Dead URL',  badgeCls:'badge-red',   arrow:'🟠 HALF<br>MODE' },
+  full: { url:'http://example.com',                               badge:'Alive URL', badgeCls:'badge-green', arrow:'🔴 FULL<br>MODE' }
+};
+
+function setDemoMode(mode) {
+  _demoMode = mode;
+  document.getElementById('mtb-half').className = 'mtbtn' + (mode==='half' ? ' active-half' : '');
+  document.getElementById('mtb-full').className = 'mtbtn' + (mode==='full' ? ' active-full' : '');
+  const cfg = _demoCfg[mode];
+  document.getElementById('compare-url').textContent = cfg.url;
+  const b = document.getElementById('url-badge');
+  b.textContent = cfg.badge; b.className = 'badge ' + cfg.badgeCls;
+  document.getElementById('demo-mode-label').textContent = mode==='half' ? 'Half Mode' : 'Full Mode';
+  document.getElementById('arrow-label').innerHTML = cfg.arrow;
+  ['before','after'].forEach(s => {
+    document.getElementById('body-'+s).innerHTML = '<div class="rp-placeholder">Nhấn "Chạy So Sánh" để bắt đầu</div>';
+  });
+  document.getElementById('panel-before').className = 'resp-panel rp-before';
+  document.getElementById('panel-after').className  = 'resp-panel rp-after';
+}
+
+function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function _renderPanel(bodyId, panelId, data, isAfter) {
+  const el = document.getElementById(bodyId);
+  const panel = document.getElementById(panelId);
+  if (!data.ok) {
+    if (isAfter) panel.className = 'resp-panel rp-after has-error';
+    el.innerHTML = `
+      <div class="resp-status-row"><span class="resp-status-badge status-err">❌ Connection Error</span></div>
+      <div class="resp-error-msg">${_esc(data.error||'Unknown error')}</div>
+      <div class="resp-footnote">${isAfter ? '⚠ INetSim chưa chạy? → Start Docker ở Card 01 trước.' : 'URL dead — không có server nào phản hồi.'}</div>
+    `;
+  } else {
+    const isSim = data.server && /inetsim|fakenet/i.test(data.server);
+    el.innerHTML = `
+      <div class="resp-status-row">
+        <span class="resp-status-badge status-ok">${data.status} OK</span>
+        ${isSim ? '<span class="resp-inetsim-badge">🔬 INetSim</span>' : ''}
+      </div>
+      <div class="resp-headers">
+        <div class="resp-hdr-row"><span class="hdr-k">Server</span><span class="hdr-v">${_esc(data.server||'—')}</span></div>
+        <div class="resp-hdr-row"><span class="hdr-k">Content-Length</span><span class="hdr-v">${data.size} bytes</span></div>
+        <div class="resp-hdr-row"><span class="hdr-k">Content-Type</span><span class="hdr-v">${_esc(data.content_type||'—')}</span></div>
+      </div>
+      <div class="resp-body-preview">${_esc((data.body||'').slice(0,220))}</div>
+    `;
+  }
+}
+
+async function runCompare() {
+  setBtn('btn-compare', true);
+  ['before','after'].forEach(s => {
+    document.getElementById('body-'+s).innerHTML = '<div class="rp-loading"><i class="fas fa-spinner fa-spin"></i>&nbsp; Đang gửi request...</div>';
+  });
+  try {
+    const r = await fetch(`/api/compare/${_demoMode}`).then(x=>x.json());
+    if (!r.ok) throw new Error('Server error');
+    _renderPanel('body-before','panel-before', r.before, false);
+    _renderPanel('body-after', 'panel-after',  r.after,  true);
+  } catch(e) {
+    ['before','after'].forEach(s => {
+      document.getElementById('body-'+s).innerHTML = `<div class="rp-placeholder">❌ ${_esc(e.message)}</div>`;
+    });
+  } finally {
+    setBtn('btn-compare', false);
+  }
+}
+
+// ── Go Test ───────────────────────────────────────────────────────────────────
+function runGoTest() {
+  setBtn('btn-gotest', true);
+  document.getElementById('go-label').textContent = 'running tests...';
+  streamTo('/stream/gotest', 'go-out', {
+    labelId: 'go-label',
+    label: 'go test -v ./...',
+    onDone: ok => {
+      setBtn('btn-gotest', false);
+      document.getElementById('go-label').textContent = ok ? 'go test -v  ✅ PASS' : 'go test -v  ❌ FAIL';
+    }
+  });
+}
+
+// ── Network Mode ──────────────────────────────────────────────────────────────
+const badgeClass = {danger:'badge-red', warning:'badge-yellow', success:'badge-green'};
+
+async function loadMode(name) {
+  // highlight selected
+  ['full','half'].forEach(m => {
+    document.getElementById('mb-'+m).className = 'mode-btn' + (m===name ? ` active-${m}` : '');
+  });
+  const d = document.getElementById('mode-detail');
+  d.style.display='block'; d.className='mode-detail show';
+  d.innerHTML='<div class="muted">Đang tải...</div>';
+
+  const r = await fetch(`/api/mode/${name}`).then(x=>x.json());
+  if(!r.ok){ d.innerHTML='<span style="color:var(--red)">Error</span>'; return; }
+  const m = r.mode;
+  const bc = badgeClass[m.color] || 'badge-green';
+  const flowHtml = m.flow.map(f=>`<li>${f}</li>`).join('');
+
+  d.innerHTML = `
+    <h4>${m.icon} ${m.title} &nbsp;<span class="badge ${bc}">${m.safety} Safety</span></h4>
+    <p class="muted" style="font-size:.83rem;margin-bottom:14px">${m.desc}</p>
+    <div class="detail-row"><span class="label"><i class="fas fa-network-wired" style="margin-right:5px;color:var(--accent2)"></i>DNS</span><code style="color:var(--accent2);font-size:.8rem">${m.dns}</code></div>
+    <div class="detail-row"><span class="label"><i class="fas fa-globe" style="margin-right:5px;color:var(--accent2)"></i>HTTP</span><code style="color:var(--accent2);font-size:.8rem">${m.http}</code></div>
+    <div class="detail-row"><span class="label"><i class="fas fa-lightbulb" style="margin-right:5px;color:var(--yellow)"></i>Use case</span><span style="font-size:.83rem">${m.usecase}</span></div>
+    <div style="margin-top:12px;font-size:.78rem;color:var(--muted);margin-bottom:6px">Flow:</div>
+    <ul class="flow-list">${flowHtml}</ul>
+  `;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  checkStatus();
+  setDemoMode('half');
+});
+</script>
+</body>
+</html>
